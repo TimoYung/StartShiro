@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-3.2.xsd">
+
+	<!-- 1.配置一个SecurityManager -->
+	<bean id="securityManager" class="org.apache.shiro.web.mgt.DefaultWebSecurityManager">
+		<property name="cacheManager" ref="cacheManager" />
+		<!-- <property name="sessionMode" value="native"/> -->
+		<property name="realm" ref="shiroRealm" />
+	</bean>
+
+	<bean id="shiroRealm" class="com.yangzhi.shiro.realms.ShiroAuthRealm">
+		<property name="credentialsMatcher">
+			<bean class="org.apache.shiro.authc.credential.HashedCredentialsMatcher">
+				<property name="hashAlgorithmName" value="MD5" />
+				<!-- 设置进行MD5加密的次数 -->
+				<property name="hashIterations" value="99" />
+			</bean>
+		</property>
+	</bean>
+
+	<!-- 2.配置CacheManger 2.1 需要加入ehcache的jar即配置文件 -->
+	<bean id="cacheManager" class="org.apache.shiro.cache.ehcache.EhCacheManager">
+		<!-- <property name="cacheManager" ref="cacheManager"/> -->
+		<property name="cacheManagerConfigFile" value="classpath:ehcache.xml" />
+	</bean>
+
+	<!-- 4. 配置LifecycleBeanPostProcessor。可以自动的类调用配置在Spring IOC容器shiro bean 的声明周期方法 -->
+	<bean id="lifecycleBeanPostProcessor" class="org.apache.shiro.spring.LifecycleBeanPostProcessor" />
+
+	<!-- 5.启用IOC容器中使用 shiro的注解 ， 但是必须在配置了LifecycleBeanPostProcessor之后才可用 -->
+	<bean
+		class="org.springframework.aop.framework.autoproxy.DefaultAdvisorAutoProxyCreator"
+		depends-on="lifecycleBeanPostProcessor" />
+	<bean
+		class="org.apache.shiro.spring.security.interceptor.AuthorizationAttributeSourceAdvisor">
+		<property name="securityManager" ref="securityManager" />
+	</bean>
+
+	<!-- 6.配置ShiroFilter 6.1 id必须和web.xml文件中配置的DelegatingFilterProxy的 filter-name 
+		一致 -->
+	<bean id="ShiroFilter" class="org.apache.shiro.spring.web.ShiroFilterFactoryBean">
+		<property name="securityManager" ref="securityManager" />
+		<property name="loginUrl" value="/login.jsp" />
+		<property name="successUrl" value="/WEB-INF/jsp/user.jsp" />
+		<property name="unauthorizedUrl" value="/unauthorizedUrl.jsp" />
+		<!-- 配置哪些页面需要受保护，以及访问这些页面需要的权限 1). anon 可以匿名访问 2）. authc 必须认证（即登录）后才可以访问 
+			3). logout 注销登录 -->
+		<property name="filterChainDefinitions">
+			<value>
+				/login.jsp = anon
+				/shiro/login = anon
+				/shiro/logout = logout
+				/shiro/user.do = roles[user]
+				/shiro/admin.do = roles[admin]
+				/** = authc
+			</value>
+		</property>
+	</bean>
+
+</beans>
